@@ -1,8 +1,8 @@
 // app/page.tsx
 import { getServerInfo } from "@/lib/serverInfo";
 
-export default function Home() {
-  const serverInfo = getServerInfo();
+export default async function Home() {
+  const serverInfo = await getServerInfo();
 
   return (
     <div style={{ fontFamily: "monospace", padding: "2rem" }}>
