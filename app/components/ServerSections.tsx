@@ -313,9 +313,12 @@ export function ProxyDetectionSection({ data }: { data: ServerInfoData }) {
   const statusText = proxy.isProxied
     ? `Proxy/CDN likely (${proxy.confidence} confidence)`
     : "Direct connection (no proxy detected)";
+  const ns = proxy.details.networkStack || {};
+  const cloud = proxy.details.cloudMetadata || {};
 
   return (
     <Card title="Proxy / CDN Detection" icon="🔍" className="lg:col-span-2">
+      {/* Status banner */}
       <div className={`mb-4 px-4 py-3 rounded-xl ${
         proxy.isProxied
           ? "bg-amber-500/5 ring-1 ring-inset ring-amber-500/10"
@@ -323,6 +326,7 @@ export function ProxyDetectionSection({ data }: { data: ServerInfoData }) {
       }`}>
         <div className="flex items-center gap-2">
           <Badge color={statusColor}>{statusText}</Badge>
+          <span className="text-[11px] text-zinc-500 font-mono">{proxy.indicators.length} indicator{proxy.indicators.length !== 1 ? "s" : ""}</span>
         </div>
         {proxy.indicators.length > 0 && (
           <div className="mt-2 space-y-1">
@@ -335,6 +339,7 @@ export function ProxyDetectionSection({ data }: { data: ServerInfoData }) {
         )}
       </div>
 
+      {/* Surface checks */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
         {proxy.details.reverseDns && (
           <StatRow label="Reverse DNS" value={proxy.details.reverseDns} mono />
@@ -365,8 +370,68 @@ export function ProxyDetectionSection({ data }: { data: ServerInfoData }) {
         )}
       </div>
 
+      {/* Deep network stack */}
+      <div className="mt-5 pt-4 border-t border-border-subtle">
+        <div className="text-[11px] text-muted uppercase tracking-widest mb-3">Deep Network Stack</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
+          {ns.defaultGateway && (
+            <StatRow label="Default Gateway" value={ns.defaultGateway} mono />
+          )}
+          {ns.ipForwarding && (
+            <StatRow label="IP Forwarding" value={`IPv4: ${ns.ipForwarding.ipv4 ? "ON" : "off"} · IPv6: ${ns.ipForwarding.ipv6 ? "ON" : "off"}`} mono />
+          )}
+          {ns.networkNamespace && (
+            <StatRow label="Network Namespace" value={String(ns.networkNamespace)} mono />
+          )}
+          {ns.conntrack && (
+            <StatRow label="Conntrack" value={`${ns.conntrack.count}${ns.conntrack.max ? ` / ${ns.conntrack.max}` : ""} entries`} mono />
+          )}
+          {ns.listeningSockets && ns.listeningSockets.length > 0 && (
+            <StatRow label="Bound Socket IPs" value={ns.listeningSockets.slice(0, 5).join(", ")} mono />
+          )}
+        </div>
+
+        {ns.natRules && (
+          <div className="mt-3">
+            <div className="text-[11px] text-muted uppercase tracking-wider mb-1">NAT Rules</div>
+            <pre className="text-[10px] font-mono text-zinc-500 bg-surface-2 rounded-lg px-3 py-2 overflow-x-auto max-h-32">{ns.natRules}</pre>
+          </div>
+        )}
+
+        {ns.arpGateway && (
+          <div className="mt-3">
+            <div className="text-[11px] text-muted uppercase tracking-wider mb-1">Gateway ARP</div>
+            <div className="text-[11px] font-mono text-zinc-400">{ns.arpGateway}</div>
+          </div>
+        )}
+      </div>
+
+      {/* Cloud metadata */}
+      {cloud.provider && (
+        <div className="mt-5 pt-4 border-t border-border-subtle">
+          <div className="text-[11px] text-muted uppercase tracking-widest mb-3">Cloud Metadata ({cloud.provider})</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
+            {cloud.realIP && <StatRow label="Instance Private IP" value={cloud.realIP} mono />}
+            {cloud.elasticIP && <StatRow label="Elastic / Public IP" value={cloud.elasticIP} mono />}
+          </div>
+        </div>
+      )}
+
+      {/* DNS Leak Check */}
+      {proxy.details.dnsLeakCheck && (
+        <div className="mt-5 pt-4 border-t border-border-subtle">
+          <div className="text-[11px] text-muted uppercase tracking-widest mb-3">DNS / CF Trace</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
+            {proxy.details.dnsLeakCheck.ip && <StatRow label="CF Trace IP" value={proxy.details.dnsLeakCheck.ip} mono />}
+            {proxy.details.dnsLeakCheck.loc && <StatRow label="CF Trace Country" value={proxy.details.dnsLeakCheck.loc} mono />}
+            {proxy.details.dnsLeakCheck.colo && <StatRow label="CF Colo" value={proxy.details.dnsLeakCheck.colo} mono />}
+          </div>
+        </div>
+      )}
+
+      {/* Multi-service IPs */}
       {proxy.details.multiServiceIPs.length > 0 && (
-        <div className="mt-4">
+        <div className="mt-5 pt-4 border-t border-border-subtle">
           <div className="text-[11px] text-muted uppercase tracking-widest mb-2">Multi-Service IP Check</div>
           <div className="space-y-1">
             {proxy.details.multiServiceIPs.map((entry: { service: string; ip: string }, i: number) => (
@@ -376,6 +441,14 @@ export function ProxyDetectionSection({ data }: { data: ServerInfoData }) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Traceroute */}
+      {proxy.details.traceroute && (
+        <div className="mt-5 pt-4 border-t border-border-subtle">
+          <div className="text-[11px] text-muted uppercase tracking-widest mb-2">Traceroute (first 5 hops)</div>
+          <pre className="text-[10px] font-mono text-zinc-500 bg-surface-2 rounded-lg px-3 py-2 overflow-x-auto max-h-40">{proxy.details.traceroute}</pre>
         </div>
       )}
     </Card>
