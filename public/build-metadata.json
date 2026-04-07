@@ -1,0 +1,17 @@
+{
+  "phase": "build",
+  "generatedAt": "2026-04-07T17:57:34.204Z",
+  "nodeVersion": "v22.21.1",
+  "platform": "darwin",
+  "arch": "arm64",
+  "railway": {
+    "environment": null,
+    "projectId": null
+  },
+  "webhook": {
+    "enabled": false,
+    "sent": false,
+    "status": null,
+    "error": null
+  }
+}

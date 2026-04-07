@@ -13,6 +13,9 @@ import {
 } from "./components/ServerSections";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function Home() {
   const data = await getServerInfo() as any;
   const memPct = parseFloat(data.memory.usagePercent);
@@ -30,7 +33,7 @@ export default async function Home() {
               </h1>
             </div>
             <p className="text-[13px] text-muted font-mono">
-              {data.distro?.PRETTY_NAME || data.os.type} &middot; {data.os.hostname} &middot; {data.buildTime}
+              {data.distro?.PRETTY_NAME || data.os.type} &middot; {data.os.hostname} &middot; {data.collectedAt}
             </p>
           </div>
           <Link
@@ -87,7 +90,7 @@ export default async function Home() {
         {/* Footer */}
         <div className="mt-10 pt-6 border-t border-border text-center">
           <p className="text-[11px] text-zinc-600 font-mono">
-            Collected at build time &middot; {data.timestamp}
+            Collected per request &middot; {data.timestamp}
           </p>
         </div>
       </div>

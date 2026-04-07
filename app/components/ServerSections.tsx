@@ -47,6 +47,7 @@ export function NetworkSection({ data }: { data: ServerInfoData }) {
   const net = data.network;
   const geo = net.ipGeo;
   const flag = geo?.countryCode ? countryFlag(geo.countryCode) : "";
+  const webhook = data.webhook;
   return (
     <Card title="Network" icon="🌐">
       {/* External IP highlight */}
@@ -64,6 +65,24 @@ export function NetworkSection({ data }: { data: ServerInfoData }) {
           </div>
         )}
       </div>
+
+      {(webhook?.build || webhook?.runtime) && (
+        <div className="mb-4 px-4 py-3 rounded-xl bg-amber-500/5 ring-1 ring-inset ring-amber-500/10">
+          <div className="text-[11px] text-amber-400/70 uppercase tracking-widest mb-2">Webhook.site Debug</div>
+          <div className="space-y-1 text-[11px] font-mono text-zinc-400">
+            {webhook?.build && (
+              <div>
+                Build ping: {webhook.build.webhook?.sent ? "sent" : webhook.build.webhook?.enabled ? "failed" : "disabled"} &middot; {webhook.build.generatedAt || "N/A"}
+              </div>
+            )}
+            {webhook?.runtime && (
+              <div>
+                Runtime ping: {webhook.runtime.sent ? "sent" : "failed"} &middot; {webhook.runtime.timestamp}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
         {net.privateIPv4.map((ip: string) => (
