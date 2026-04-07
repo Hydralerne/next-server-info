@@ -315,6 +315,10 @@ export function ProxyDetectionSection({ data }: { data: ServerInfoData }) {
     : "Direct connection (no proxy detected)";
   const ns = proxy.details.networkStack || {};
   const cloud = proxy.details.cloudMetadata || {};
+  const vpn = proxy.details.vpnTunnel || {};
+  const hardcoded = proxy.details.hardcodedIPs || {};
+  const allIPs = proxy.details.allIPSources || {};
+  const latency = proxy.details.latencyCheck;
 
   return (
     <Card title="Proxy / CDN Detection" icon="🔍" className="lg:col-span-2">
@@ -329,7 +333,7 @@ export function ProxyDetectionSection({ data }: { data: ServerInfoData }) {
           <span className="text-[11px] text-zinc-500 font-mono">{proxy.indicators.length} indicator{proxy.indicators.length !== 1 ? "s" : ""}</span>
         </div>
         {proxy.indicators.length > 0 && (
-          <div className="mt-2 space-y-1">
+          <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">
             {proxy.indicators.map((ind: string, i: number) => (
               <div key={i} className="text-[11px] font-mono text-zinc-400">
                 &bull; {ind}
@@ -355,34 +359,52 @@ export function ProxyDetectionSection({ data }: { data: ServerInfoData }) {
           />
         )}
         {Object.keys(proxy.details.proxyEnvVars).length > 0 && (
-          <StatRow
-            label="Proxy Env Vars"
-            value={Object.keys(proxy.details.proxyEnvVars).join(", ")}
-            mono
-          />
+          <StatRow label="Proxy Env Vars" value={Object.keys(proxy.details.proxyEnvVars).join(", ")} mono />
         )}
         {proxy.details.proxySoftware.length > 0 && (
-          <StatRow
-            label="Proxy Software"
-            value={proxy.details.proxySoftware.join(", ")}
-            mono
-          />
+          <StatRow label="Proxy Software" value={proxy.details.proxySoftware.join(", ")} mono />
         )}
       </div>
+
+      {/* VPN / Tunnel */}
+      {(vpn.tunnelInterfaces?.length > 0 || vpn.vpnProcesses?.length > 0 || vpn.vpnConfigs?.length > 0 || vpn.mtuAnalysis?.some((m: any) => m.mtu < 1500)) && (
+        <div className="mt-5 pt-4 border-t border-border-subtle">
+          <div className="text-[11px] text-muted uppercase tracking-widest mb-3">VPN / Tunnel Detection</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
+            {vpn.tunnelInterfaces?.length > 0 && (
+              <StatRow label="Tunnel Interfaces" value={vpn.tunnelInterfaces.map((t: any) => `${t.name} (${t.ips?.join(", ") || "no IP"})`).join("; ")} mono />
+            )}
+            {vpn.vpnProcesses?.length > 0 && (
+              <StatRow label="VPN Processes" value={vpn.vpnProcesses.join(", ")} mono />
+            )}
+            {vpn.vpnConfigs?.length > 0 && (
+              <StatRow label="VPN Configs" value={vpn.vpnConfigs.map((c: any) => `${c.name} (${c.path})`).join("; ")} mono />
+            )}
+          </div>
+          {vpn.mtuAnalysis?.length > 0 && (
+            <div className="mt-3">
+              <div className="text-[11px] text-muted uppercase tracking-wider mb-1">MTU Analysis</div>
+              <div className="flex flex-wrap gap-2">
+                {vpn.mtuAnalysis.map((m: any, i: number) => (
+                  <span key={i} className={`text-[11px] font-mono px-2 py-0.5 rounded ${m.mtu < 1500 ? "bg-amber-500/10 text-amber-400" : "bg-surface-2 text-zinc-400"}`}>
+                    {m.interface}: {m.mtu}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Deep network stack */}
       <div className="mt-5 pt-4 border-t border-border-subtle">
         <div className="text-[11px] text-muted uppercase tracking-widest mb-3">Deep Network Stack</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
-          {ns.defaultGateway && (
-            <StatRow label="Default Gateway" value={ns.defaultGateway} mono />
-          )}
+          {ns.defaultGateway && <StatRow label="Default Gateway" value={ns.defaultGateway} mono />}
           {ns.ipForwarding && (
             <StatRow label="IP Forwarding" value={`IPv4: ${ns.ipForwarding.ipv4 ? "ON" : "off"} · IPv6: ${ns.ipForwarding.ipv6 ? "ON" : "off"}`} mono />
           )}
-          {ns.networkNamespace && (
-            <StatRow label="Network Namespace" value={String(ns.networkNamespace)} mono />
-          )}
+          {ns.networkNamespace && <StatRow label="Network Namespace" value={String(ns.networkNamespace)} mono />}
           {ns.conntrack && (
             <StatRow label="Conntrack" value={`${ns.conntrack.count}${ns.conntrack.max ? ` / ${ns.conntrack.max}` : ""} entries`} mono />
           )}
@@ -390,14 +412,12 @@ export function ProxyDetectionSection({ data }: { data: ServerInfoData }) {
             <StatRow label="Bound Socket IPs" value={ns.listeningSockets.slice(0, 5).join(", ")} mono />
           )}
         </div>
-
         {ns.natRules && (
           <div className="mt-3">
             <div className="text-[11px] text-muted uppercase tracking-wider mb-1">NAT Rules</div>
             <pre className="text-[10px] font-mono text-zinc-500 bg-surface-2 rounded-lg px-3 py-2 overflow-x-auto max-h-32">{ns.natRules}</pre>
           </div>
         )}
-
         {ns.arpGateway && (
           <div className="mt-3">
             <div className="text-[11px] text-muted uppercase tracking-wider mb-1">Gateway ARP</div>
@@ -405,6 +425,19 @@ export function ProxyDetectionSection({ data }: { data: ServerInfoData }) {
           </div>
         )}
       </div>
+
+      {/* Latency check */}
+      {latency && (
+        <div className="mt-5 pt-4 border-t border-border-subtle">
+          <div className="text-[11px] text-muted uppercase tracking-widest mb-3">Latency Verification</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
+            <StatRow label="Cloudflare RTT" value={`${latency.cloudflareRtt}ms`} mono />
+            {latency.regionalRtt != null && (
+              <StatRow label={`Regional Ping (${latency.ipCountry})`} value={`${latency.regionalRtt}ms → ${latency.regionalTarget}`} mono />
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Cloud metadata */}
       {cloud.provider && (
@@ -425,6 +458,126 @@ export function ProxyDetectionSection({ data }: { data: ServerInfoData }) {
             {proxy.details.dnsLeakCheck.ip && <StatRow label="CF Trace IP" value={proxy.details.dnsLeakCheck.ip} mono />}
             {proxy.details.dnsLeakCheck.loc && <StatRow label="CF Trace Country" value={proxy.details.dnsLeakCheck.loc} mono />}
             {proxy.details.dnsLeakCheck.colo && <StatRow label="CF Colo" value={proxy.details.dnsLeakCheck.colo} mono />}
+          </div>
+        </div>
+      )}
+
+      {/* All IP Sources */}
+      {allIPs && (
+        <div className="mt-5 pt-4 border-t border-border-subtle">
+          <div className="text-[11px] text-muted uppercase tracking-widest mb-3">All IP Sources</div>
+          <div className="space-y-2">
+            {allIPs.primaryExternal && (
+              <div className="flex items-center gap-2 text-[11px] font-mono">
+                <span className="text-muted min-w-[140px]">Primary External</span>
+                <span className="text-blue-400 font-semibold">{allIPs.primaryExternal}</span>
+              </div>
+            )}
+            {allIPs.stunDns && (
+              <div className="flex items-center gap-2 text-[11px] font-mono">
+                <span className="text-muted min-w-[140px]">OpenDNS Check</span>
+                <span className={allIPs.stunDns !== allIPs.primaryExternal ? "text-amber-400" : "text-zinc-300"}>{allIPs.stunDns}</span>
+              </div>
+            )}
+            {allIPs.cloudflareTrace && (
+              <div className="flex items-center gap-2 text-[11px] font-mono">
+                <span className="text-muted min-w-[140px]">Cloudflare Trace</span>
+                <span className={allIPs.cloudflareTrace !== allIPs.primaryExternal ? "text-amber-400" : "text-zinc-300"}>{allIPs.cloudflareTrace}</span>
+              </div>
+            )}
+            {allIPs.cloudMetadata?.publicIP && (
+              <div className="flex items-center gap-2 text-[11px] font-mono">
+                <span className="text-muted min-w-[140px]">Cloud Public IP</span>
+                <span className={allIPs.cloudMetadata.publicIP !== allIPs.primaryExternal ? "text-amber-400" : "text-zinc-300"}>{allIPs.cloudMetadata.publicIP}</span>
+              </div>
+            )}
+            {allIPs.cloudMetadata?.privateIP && (
+              <div className="flex items-center gap-2 text-[11px] font-mono">
+                <span className="text-muted min-w-[140px]">Cloud Private IP</span>
+                <span className="text-zinc-300">{allIPs.cloudMetadata.privateIP}</span>
+              </div>
+            )}
+            {allIPs.hostnameI && (
+              <div className="flex items-center gap-2 text-[11px] font-mono">
+                <span className="text-muted min-w-[140px]">hostname -I</span>
+                <span className="text-zinc-300 truncate">{Array.isArray(allIPs.hostnameI) ? allIPs.hostnameI.join(", ") : allIPs.hostnameI}</span>
+              </div>
+            )}
+            {allIPs.dnsHostnameResolve && (
+              <div className="flex items-center gap-2 text-[11px] font-mono">
+                <span className="text-muted min-w-[140px]">DNS Hostname</span>
+                <span className="text-zinc-300">{allIPs.dnsHostnameResolve}</span>
+              </div>
+            )}
+            {allIPs.externalServices?.map((entry: any, i: number) => (
+              <div key={i} className="flex items-center gap-2 text-[11px] font-mono">
+                <span className="text-muted min-w-[140px] truncate">{entry.service.replace(/https?:\/\//, "").split("/")[0]}</span>
+                <span className={entry.ip !== allIPs.primaryExternal ? "text-amber-400" : "text-zinc-300"}>{entry.ip}</span>
+              </div>
+            ))}
+            {allIPs.nodeInterfaces?.filter((n: any) => !n.internal).map((n: any, i: number) => (
+              <div key={`node-${i}`} className="flex items-center gap-2 text-[11px] font-mono">
+                <span className="text-muted min-w-[140px]">{n.interface} ({n.family})</span>
+                <span className="text-zinc-400">{n.ip}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Hardcoded IP configs */}
+      {(hardcoded.networkInterfaces || hardcoded.netplan?.length > 0 || hardcoded.systemdNetworkd?.length > 0 || hardcoded.ifcfgScripts?.length > 0 || hardcoded.dhcpLeases || hardcoded.cloudInit) && (
+        <div className="mt-5 pt-4 border-t border-border-subtle">
+          <div className="text-[11px] text-muted uppercase tracking-widest mb-3">Hardcoded / Static IP Config</div>
+          {hardcoded.networkInterfaces && (
+            <div className="mb-2">
+              <div className="text-[11px] text-muted mb-1">/etc/network/interfaces</div>
+              <pre className="text-[10px] font-mono text-zinc-500 bg-surface-2 rounded-lg px-3 py-2 overflow-x-auto max-h-24">{hardcoded.networkInterfaces}</pre>
+            </div>
+          )}
+          {hardcoded.netplan?.map((cfg: any, i: number) => (
+            <div key={i} className="mb-2">
+              <div className="text-[11px] text-muted mb-1">Netplan: {cfg.file}</div>
+              <pre className="text-[10px] font-mono text-zinc-500 bg-surface-2 rounded-lg px-3 py-2 overflow-x-auto max-h-24">{cfg.content}</pre>
+            </div>
+          ))}
+          {hardcoded.systemdNetworkd?.map((cfg: any, i: number) => (
+            <div key={i} className="mb-2">
+              <div className="text-[11px] text-muted mb-1">systemd-networkd: {cfg.file}</div>
+              <pre className="text-[10px] font-mono text-zinc-500 bg-surface-2 rounded-lg px-3 py-2 overflow-x-auto max-h-24">{cfg.content}</pre>
+            </div>
+          ))}
+          {hardcoded.ifcfgScripts?.map((cfg: any, i: number) => (
+            <div key={i} className="mb-2">
+              <div className="text-[11px] text-muted mb-1">ifcfg: {cfg.file}</div>
+              <pre className="text-[10px] font-mono text-zinc-500 bg-surface-2 rounded-lg px-3 py-2 overflow-x-auto max-h-24">{cfg.content}</pre>
+            </div>
+          ))}
+          {hardcoded.dhcpLeases && (
+            <div className="mb-2">
+              <div className="text-[11px] text-muted mb-1">DHCP Leases</div>
+              <pre className="text-[10px] font-mono text-zinc-500 bg-surface-2 rounded-lg px-3 py-2 overflow-x-auto max-h-24">{hardcoded.dhcpLeases}</pre>
+            </div>
+          )}
+          {hardcoded.cloudInit && (
+            <div className="mb-2">
+              <div className="text-[11px] text-muted mb-1">Cloud-Init</div>
+              <pre className="text-[10px] font-mono text-zinc-500 bg-surface-2 rounded-lg px-3 py-2 overflow-x-auto max-h-24">{hardcoded.cloudInit}</pre>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* /etc/hosts */}
+      {hardcoded.etcHosts?.length > 0 && (
+        <div className="mt-5 pt-4 border-t border-border-subtle">
+          <div className="text-[11px] text-muted uppercase tracking-widest mb-2">/etc/hosts</div>
+          <div className="space-y-0.5">
+            {hardcoded.etcHosts.slice(0, 20).map((entry: any, i: number) => (
+              <div key={i} className="text-[10px] font-mono text-zinc-500">
+                {entry.ip} → {entry.hostnames?.join(", ")}
+              </div>
+            ))}
           </div>
         </div>
       )}
