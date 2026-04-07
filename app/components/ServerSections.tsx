@@ -303,6 +303,85 @@ export function SoftwareSection({ data }: { data: ServerInfoData }) {
   );
 }
 
+export function ProxyDetectionSection({ data }: { data: ServerInfoData }) {
+  const proxy = data.proxyDetection;
+  if (!proxy) return null;
+
+  const statusColor = proxy.isProxied
+    ? proxy.confidence === "high" ? "red" : proxy.confidence === "medium" ? "yellow" : "yellow"
+    : "green";
+  const statusText = proxy.isProxied
+    ? `Proxy/CDN likely (${proxy.confidence} confidence)`
+    : "Direct connection (no proxy detected)";
+
+  return (
+    <Card title="Proxy / CDN Detection" icon="🔍" className="lg:col-span-2">
+      <div className={`mb-4 px-4 py-3 rounded-xl ${
+        proxy.isProxied
+          ? "bg-amber-500/5 ring-1 ring-inset ring-amber-500/10"
+          : "bg-emerald-500/5 ring-1 ring-inset ring-emerald-500/10"
+      }`}>
+        <div className="flex items-center gap-2">
+          <Badge color={statusColor}>{statusText}</Badge>
+        </div>
+        {proxy.indicators.length > 0 && (
+          <div className="mt-2 space-y-1">
+            {proxy.indicators.map((ind: string, i: number) => (
+              <div key={i} className="text-[11px] font-mono text-zinc-400">
+                &bull; {ind}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
+        {proxy.details.reverseDns && (
+          <StatRow label="Reverse DNS" value={proxy.details.reverseDns} mono />
+        )}
+        {proxy.details.knownProxyOrg && (
+          <StatRow label="Known Proxy Org" value="Yes" />
+        )}
+        {proxy.details.locationMismatch && (
+          <StatRow
+            label="Location Mismatch"
+            value={`TZ: ${proxy.details.locationMismatch.serverTimezone} → IP: ${proxy.details.locationMismatch.ipCountry || proxy.details.locationMismatch.ipContinent}`}
+            mono
+          />
+        )}
+        {Object.keys(proxy.details.proxyEnvVars).length > 0 && (
+          <StatRow
+            label="Proxy Env Vars"
+            value={Object.keys(proxy.details.proxyEnvVars).join(", ")}
+            mono
+          />
+        )}
+        {proxy.details.proxySoftware.length > 0 && (
+          <StatRow
+            label="Proxy Software"
+            value={proxy.details.proxySoftware.join(", ")}
+            mono
+          />
+        )}
+      </div>
+
+      {proxy.details.multiServiceIPs.length > 0 && (
+        <div className="mt-4">
+          <div className="text-[11px] text-muted uppercase tracking-widest mb-2">Multi-Service IP Check</div>
+          <div className="space-y-1">
+            {proxy.details.multiServiceIPs.map((entry: { service: string; ip: string }, i: number) => (
+              <div key={i} className="flex items-center gap-2 text-[11px] font-mono text-zinc-400">
+                <span className="text-zinc-600 truncate max-w-[200px]">{entry.service.replace(/https?:\/\//, "")}</span>
+                <span className="text-zinc-300">{entry.ip}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export function TimezoneSection({ data }: { data: ServerInfoData }) {
   return (
     <Card title="Timezone" icon="🕐">

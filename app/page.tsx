@@ -10,6 +10,7 @@ import {
   SecuritySection,
   SoftwareSection,
   TimezoneSection,
+  ProxyDetectionSection,
 } from "./components/ServerSections";
 import Link from "next/link";
 
@@ -85,6 +86,7 @@ export default async function Home() {
           </div>
           <TimezoneSection data={data} />
           <SoftwareSection data={data} />
+          <ProxyDetectionSection data={data} />
         </div>
 
         {/* Footer */}
